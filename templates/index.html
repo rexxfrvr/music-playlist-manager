@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Music Playlist Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 8px; margin-bottom: 5px; background: #f0f0f0; cursor: pointer; }
+        li:hover { background: #ddd; }
+        button { margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Music Playlist Manager</h1>
+    <input type="text" id="newSong" placeholder="Enter song filename (e.g. song3.mp3)" />
+    <button onclick="addSong()">Add Song</button>
+    <button onclick="shuffle()">Shuffle</button>
+    <ul id="playlist">
+        {% for song in songs %}
+            <li onclick="playSong('{{ song }}')">{{ song }} <button onclick="removeSong(event, '{{ song }}')">Remove</button></li>
+        {% endfor %}
+    </ul>
+
+<script>
+function addSong(){
+    const song = document.getElementById('newSong').value;
+    if(!song) return alert('Please enter a song filename');
+    fetch('/add_song', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({song: song})
+    }).then(res => res.json())
+    .then(data => {
+        if(data.status === 'success'){
+            updateList(data.songs);
+            document.getElementById('newSong').value = '';
+        } else alert(data.message);
+    });
+}
+
+function removeSong(e, song){
+    e.stopPropagation();
+    fetch('/remove_song', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({song: song})
+    }).then(res => res.json())
+    .then(data => {
+        if(data.status === 'success'){
+            updateList(data.songs);
+        } else alert(data.message);
+    });
+}
+
+function shuffle(){
+    fetch('/shuffle', {method: 'POST'})
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success'){
+            updateList(data.songs);
+        }
+    });
+}
+
+function playSong(song){
+    fetch('/play', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({song: song})
+    }).then(res => res.json())
+    .then(data => {
+        if(data.status === 'playing'){
+            alert('Playing: ' + data.song);
+        }
+    });
+}
+
+function updateList(songs){
+    const ul = document.getElementById('playlist');
+    ul.innerHTML = '';
+    songs.forEach(song => {
+        const li = document.createElement('li');
+        li.textContent = song;
+        li.onclick = () => playSong(song);
+
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.onclick = (e) => { e.stopPropagation(); removeSong(e, song); };
+
+        li.appendChild(btn);
+        ul.appendChild(li);
+    });
+}
+</script>
+</body>
+</html>
